@@ -5,21 +5,74 @@ output:
     keep_md: true
 ---
 
+```{r, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(timeDate)
+```
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
+```{r, echo=TRUE}
+data <- read.csv('C:/activity.csv')
+data1 <- data[complete.cases(data),]
+data1$date <- as.Date(data1$date)
+byday <- aggregate(data1['steps'], by=data1['date'], sum)
+```
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+Creates a histogram of the total number of steps each day and their frequency
+```{r, echo=TRUE}
+hist(byday$steps, xlab='Total Steps', ylab ='Frequency', main='Frequency of Total Daily Steps')
+```
+
+Calculates the mean and median steps per day
+```{r, echo=TRUE}
+mean(byday$steps)
+median(byday$steps)
+```
+
+
+Plots the average steps taken at each interval
+Finds the highest average step, then return the row number, interval number, and the average steps
+```{r, echo=TRUE}
+byint <- aggregate(data1['steps'], by=data1['interval'], mean)
+plot(byint, type='l')
+which.max(byint$steps)
+byint[104,]
+```
+
+
+I messed up and cleaned the data before analyzing. I got to this step and realized it was to clean the data, so ill explain what I did before.
+I calculated the number of missing data using is.na, realized it was all in order and intervals of 288 which is a whole day. So instead of inserting data into those mising days I simply removed those days. If the NA values were part of a day, removing them could cause issues if say there was high values remaining but the low values were missing. Since it was an entire days observation removing them should be fine. If i was to insert numbers, id use the the mean for each day calculated. This would keep the mean the same but could change the median
+```{r, echo=TRUE}
+#data <- read.csv('C:/activity.csv')
+#data1 <- data[complete.cases(data),]
+#data1$date <- as.Date(data1$date)
+#byday <- aggregate(data1['steps'], by=data1['date'], sum)
+sum(is.na(data)) #total missing count
+which(is.na(data)) #shows missing values are always next to eachother and are an entire days observation(288 intervals)
+sum(is.na(data))/288 #shows number of days missing
+hist(data$steps)
+```
+
+
+
+First, I loop through the data and check to see the type of day, either weekend or weekday. Then i assign it to a new factored variable called type.
+Then I collect the average steps for each interval by the type(in this case weekend vs weekday) and plot it with the type being the facet
+```{r, echo=TRUE}
+for (i in 1:nrow(data1)){
+  
+  if (as.logical(isWeekday(data1$date[i]))=='TRUE'){
+    data1$type[i] <- 'Weekday'
+    
+} else
+  {
+    data1$type[i] <- 'Weekend'
+  }
+}
+
+data1$type <- as.factor(data1$type)
+
+ab <- aggregate(data1['steps'], by=data1[c('interval','type')], mean)
+ggplot(data=ab, aes(interval, steps)) + geom_line() + facet_grid(cols=vars(type))
+```
